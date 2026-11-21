@@ -4,6 +4,7 @@ import backend_clima.dev.dto.HistoryItemResponse;
 import backend_clima.dev.dto.TrendPointResponse;
 import backend_clima.dev.dto.WeatherResponse;
 import backend_clima.dev.entity.City;
+import backend_clima.dev.entity.User;
 import backend_clima.dev.entity.WeatherHistory;
 import backend_clima.dev.repository.WeatherHistoryRepository;
 import lombok.RequiredArgsConstructor;
@@ -25,13 +26,14 @@ public class HistoryService {
     private final CityService cityService;
 
     @Transactional
-    public void record(WeatherResponse weather) {
+    public void record(User user, WeatherResponse weather) {
         if (weather == null || weather.getCityName() == null) {
             return;
         }
         City city = cityService.findOrCreate(weather.getCityName(), weather.getCountry());
 
         WeatherHistory entry = new WeatherHistory();
+        entry.setUser(user);
         entry.setCity(city);
         entry.setTemperature(weather.getTemp());
         entry.setFeelsLike(weather.getFeelsLike());
@@ -44,8 +46,8 @@ public class HistoryService {
     }
 
     @Transactional(readOnly = true)
-    public List<HistoryItemResponse> recent(int limit) {
-        return historyRepository.findAllByOrderBySearchedAtDesc(PageRequest.of(0, clamp(limit))).stream()
+    public List<HistoryItemResponse> recent(User user, int limit) {
+        return historyRepository.findAllByUserIdOrderBySearchedAtDesc(user.getId(), PageRequest.of(0, clamp(limit))).stream()
                 .map(h -> new HistoryItemResponse(
                         h.getId(),
                         h.getCity().getName(),
@@ -58,9 +60,9 @@ public class HistoryService {
 
     /** Últimas medições da cidade, em ordem cronológica (mais antiga primeiro) para plotar o gráfico. */
     @Transactional(readOnly = true)
-    public List<TrendPointResponse> trend(String cityName, int limit) {
+    public List<TrendPointResponse> trend(User user, String cityName, int limit) {
         List<TrendPointResponse> points = new ArrayList<>(
-                historyRepository.findByCityNameIgnoreCaseOrderBySearchedAtDesc(cityName, PageRequest.of(0, clamp(limit)))
+                historyRepository.findByUserIdAndCityNameIgnoreCaseOrderBySearchedAtDesc(user.getId(), cityName, PageRequest.of(0, clamp(limit)))
                         .stream()
                         .map(h -> new TrendPointResponse(h.getTemperature(), h.getFeelsLike(), h.getHumidity(), h.getSearchedAt()))
                         .toList());
@@ -69,8 +71,8 @@ public class HistoryService {
     }
 
     @Transactional
-    public void clear() {
-        historyRepository.deleteAllInBatch();
+    public void clear(User user) {
+        historyRepository.deleteAllByUserId(user.getId());
     }
 
     private int clamp(int limit) {
