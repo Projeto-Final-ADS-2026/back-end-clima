@@ -64,4 +64,17 @@ class AuthControllerTest {
         mvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
                 .content(body("c@teste.com", "123"))).andExpect(status().isBadRequest());
     }
+
+    @Test
+    void erroDeServidorNaoViraNaoAutorizado() throws Exception {
+        String resp = mvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
+                        .content(body("dani@teste.com", "segredo1")))
+                .andReturn().getResponse().getContentAsString();
+        String token = resp.replaceAll(".*\"token\":\"([^\"]+)\".*", "$1");
+
+        // corpo ilegivel => erro 400, nunca 401 para quem tem token valido
+        mvc.perform(post("/api/favoritos").header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON).content("{invalido"))
+                .andExpect(status().isBadRequest());
+    }
 }
