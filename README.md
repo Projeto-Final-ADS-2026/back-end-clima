@@ -53,7 +53,7 @@ Em vez do arquivo, você pode usar variáveis de ambiente:
 |---|---|---|
 | `WEATHER_API_KEY` | sim | Chave do OpenWeatherMap |
 | `JWT_SECRET` | sim | Segredo para assinar os tokens (mínimo 32 caracteres) |
-| `CORS_ALLOWED_ORIGINS` | não | Origens do frontend, separadas por vírgula (ex.: `http://localhost:3000`) |
+| `CORS_ALLOWED_ORIGINS` | não | Origens do frontend, separadas por vírgula. Padrão: `http://localhost:3000`, `http://localhost:3001` e `http://localhost:5173` |
 
 > ⚠️ Nunca faça commit de chaves ou senhas. Se o `jwt.secret` mudar, todos os tokens emitidos deixam de valer e os usuários precisam entrar de novo.
 
@@ -76,7 +76,7 @@ Os testes usam um banco H2 em memória, então não precisam de MySQL nem de cha
 3. O token expira em 24 horas (`jwt.expiration-ms`).
 4. Senhas são guardadas com BCrypt. A API é stateless, sem sessão no servidor.
 
-Rotas públicas: `/api/auth/register`, `/api/auth/login`, Swagger e `/v3/api-docs`. Todo o resto de `/api/**` exige token.
+Rotas públicas: `/api/auth/register`, `/api/auth/login`, `/error`, Swagger e `/v3/api-docs`. Todo o resto de `/api/**` exige token.
 
 ## 🌐 Endpoints
 
@@ -94,6 +94,16 @@ Rotas públicas: `/api/auth/register`, `/api/auth/login`, Swagger e `/v3/api-doc
 | DELETE | `/api/favoritos/{id}` | sim | Remove um favorito do próprio usuário |
 
 Favoritar uma cidade já favoritada devolve o favorito existente. Um usuário não consegue ver nem apagar favoritos ou histórico de outro.
+
+### Códigos de erro
+| Código | Quando |
+|---|---|
+| 400 | Corpo da requisição inválido ou campo obrigatório ausente |
+| 401 | Token ausente, inválido ou expirado, ou credenciais erradas no login |
+| 409 | E-mail já cadastrado ou violação de unicidade no banco |
+| 404 | Favorito inexistente ou de outro usuário |
+
+Erros internos do servidor não são mais devolvidos como 401, para que o frontend não confunda uma falha com sessão expirada.
 
 ## 🗄️ Banco de dados
 O schema é criado e atualizado pelo Hibernate (`ddl-auto=update`).
